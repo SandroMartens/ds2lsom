@@ -1,41 +1,75 @@
 # DS2L-SOM
 
-DS2L-SOM is clustering algorithm based on Self Organizing Maps (SOM).
+DS2L-SOM is a topological, density-based clustering algorithm. It combines a Self-Organizing Map (SOM) for prototype learning with Gaussian KDE density estimation and gradient ascent to detect clusters — without requiring the number of clusters to be specified in advance.
 
+Based on the papers by Cabanes, Bennani and Fresneau (2008, 2012).
 
-## In a project
-
-DSL2-SOM follows the scikit-learn API. We can train on data in the form `(n_samples, n_features)`.
+## Usage
 
 ```python
-from ds2lsom import DS2LSOM
-clusterer = DS2LSOM()
-clusterer.fit(data)
-labels = clusterer.predict(data)
+from ds2l_som.ds2lsom import DS2LSOM
+
+model = DS2LSOM(n_prototypes=100, threshold=10)
+model.fit(X)
+labels = model.predict(X)   # sequential integers; -1 = unassigned
+
+# or short:
+labels = model.fit_predict(X)
 ```
+
+DS2LSOM implements the scikit-learn API (`ClusterMixin`, `BaseEstimator`) and is compatible with sklearn pipelines and `GridSearchCV`.
+
+## Parameters
+
+| Parameter | Default | Description |
+|---|---|---|
+| `n_prototypes` | auto (10·√n) | Maximum number of SOM prototypes |
+| `threshold` | 1 | Minimum shared samples for a prototype edge |
+| `sigma` | auto | Bandwidth for Gaussian KDE density estimation |
+| `method` | `"som"` | Quantizer backend: `"som"` (dbgsom) or `"kmeans"` |
+| `model_args` | `None` | Kwargs passed to the quantizer: `{"init": {...}, "train": {...}}` |
+| `verbose` | `False` | Print progress |
+
+Example with custom SOM parameters:
+
+```python
+model = DS2LSOM(
+    n_prototypes=100,
+    threshold=10,
+    model_args={"init": {"sigma_end": 1.0, "random_state": 42}},
+)
+```
+
+## Performance
+
+Evaluated on `load_digits` (1797 samples, 64 features, 10 classes) using pairwise Rand and Jaccard index (as defined in the papers). DS2LSOM does not receive the true number of clusters.
+
+| Algorithm | Clusters | Noise | Rand | Jaccard |
+|---|:---:|:---:|:---:|:---:|
+| DS2LSOM | 9 (auto) | 37 | 0.912 | 0.461 |
+| KMeans *(n=10 given)* | 10 | 0 | 0.906 | 0.415 |
+| Agglomerative *(n=10 given)* | 10 | 0 | 0.930 | 0.542 |
+| HDBSCAN | 6 (auto) | 1244 | — | — |
+
+HDBSCAN metrics are excluded: 69% noise points make the scores not comparable.
+
+## Scalability
+
+Time and memory complexity: **O(n · k)** where k ≈ 10·√n (default heuristic), giving O(n^1.5) overall. The distance matrix (shape k × n) is the main memory bottleneck — practical limit is around **50 000–100 000 samples**.
 
 ## Installing
 
 ```bash
-# Entwicklung
+# Development
 git clone https://github.com/SandroMartens/ds2l-som.git
 cd ds2l-som
 uv sync
 
-# Als Dependency in einem anderen Projekt
+# As a dependency in another project
 uv add ds2l-som
 ```
 
-## Notes
-
-ToDo:
-
-- Examples
-
 ## References
 
-- _A Local Density-based Simultaneous Two-level Algorithm for
-Topographic Clustering_, Guénaël Cabanes and Younès Bennani,
-2008
-- _Enriched topological learning for cluster detection and visualization_,
-Guénaël Cabanes, Younès Bennani and Dominique Fresneau, 2012
+- *A Local Density-based Simultaneous Two-level Algorithm for Topographic Clustering*, Guénaël Cabanes and Younès Bennani, 2008
+- *Enriched topological learning for cluster detection and visualization*, Guénaël Cabanes, Younès Bennani and Dominique Fresneau, 2012
