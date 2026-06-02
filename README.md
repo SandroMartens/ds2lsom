@@ -17,18 +17,14 @@ labels = clusterer.predict(data)
 ## Installing
 
 ```bash
+# Entwicklung
 git clone https://github.com/SandroMartens/ds2l-som.git
-cd ds2l_som
-pip install -e .
+cd ds2l-som
+uv sync
+
+# Als Dependency in einem anderen Projekt
+uv add ds2l-som
 ```
-
-## Dependencies
-
-- Pandas
-- Numpy
-- NetworkX
-- MiniSom
-- scikit-learn
 
 ## Notes
 

@@ -1,0 +1,22 @@
+[project]
+name = "ds2l-som"
+version = "0.1.0"
+description = "DS2L-SOM is a Local Density-based Simultaneous Two-level Algorithm for Topographic Clustering"
+readme = "README.md"
+license = { file = "LICENSE.md" }
+authors = [{ name = "Sandro Martens" }]
+requires-python = ">=3.12"
+dependencies = [
+    "numpy>=1.20",
+    "networkx>=2.6",
+    "pandas>=1.3.5",
+    "minisom>=2.2",
+    "scikit-learn>=1.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

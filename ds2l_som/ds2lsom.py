@@ -91,7 +91,6 @@ class DS2LSOM:
         self.n_prototypes = self.som_dim**2
 
         self.quantizer = self._train_quantizer(data)
-        # self.win_map = self.som.win_map(data, return_indices=True)
         self._get_dist_matrix(data)
         self.nbr_values, self.prototypes = self._enrich_prototypes()
         self.edge_list = self._get_edges()
