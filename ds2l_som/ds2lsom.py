@@ -3,12 +3,13 @@ from typing import Union
 import networkx as nx
 import numpy as np
 import pandas as pd
-from minisom import MiniSom
+from dbgsom.SomVQ import SomVQ
+from sklearn.base import BaseEstimator, ClusterMixin
 from sklearn.cluster import KMeans
 from sklearn.metrics import pairwise_distances
 
 
-class DS2LSOM:
+class DS2LSOM(ClusterMixin, BaseEstimator):
     """Clustering learned from vector prototypes.
 
     Implementation of the paper
@@ -62,7 +63,6 @@ class DS2LSOM:
         if self.method not in methods:
             raise ValueError(f"{method} is not an method for prototype computation.")
 
-        #  Update Minisom args at train time
         self.n_prototypes = n_prototypes
         self.model_args = model_args
         self.threshold = threshold
@@ -86,9 +86,7 @@ class DS2LSOM:
         sample_size = len(data)
         if self.n_prototypes is None:
             self.n_prototypes = int(10 * (sample_size ** (1 / 2)))
-
-        self.som_dim = int((self.n_prototypes) ** (1 / 2))
-        self.n_prototypes = self.som_dim**2
+        assert isinstance(self.n_prototypes, int)
 
         self.quantizer = self._train_quantizer(data)
         self._get_dist_matrix(data)
@@ -116,25 +114,31 @@ class DS2LSOM:
         """
         #  Get Best Matching Prototype
         if self.method == "som":
-            pred = self.quantizer._distance_from_weights(data).argsort(axis=-1)[:, 0]
+            pred = pairwise_distances(self.weights, data).argmin(axis=0)
         elif self.method == "kmeans":
             pred = self.quantizer.predict(data)
 
+        pred = np.array(pred, dtype=np.intp)
         for sample, prototype in enumerate(pred):
             if prototype in self.graph:
                 pred[sample] = self.graph.nodes[prototype]["label"]
             else:
                 pred[sample] = -1
-        return np.array(pred)
+
+        # Remap sparse prototype indices to sequential 0..n_clusters-1
+        assigned = pred >= 0
+        if assigned.any():
+            _, pred[assigned] = np.unique(pred[assigned], return_inverse=True)
+        return pred
 
     def _get_dist_matrix(self, data) -> None:
         """Calculate distance matrix (i, j) for prototype i and sample j."""
         if self.method == "som":
-            self.dist_matrix = self.quantizer._distance_from_weights(data).T
+            self.dist_matrix = pairwise_distances(self.weights, data)
         elif self.method == "kmeans":
             self.dist_matrix = self.quantizer.transform(data).T
 
-    def _train_quantizer(self, data) -> Union[MiniSom, KMeans]:
+    def _train_quantizer(self, data) -> Union[SomVQ, KMeans]:
         """Define model and train on data.
 
         Input:
@@ -145,41 +149,33 @@ class DS2LSOM:
         -------
         Trained SOM Object
         """
+        assert isinstance(self.n_prototypes, int)
+
         if self.method == "som":
-            minisom_args_default = {
-                "init": {
-                    "x": self.som_dim,
-                    "y": self.som_dim,
-                    "input_len": data.shape[1],
-                },
-                "train": {"num_iteration": 10 * len(data)},
-            }
-
+            init_kwargs: dict = {"max_neurons": self.n_prototypes}
+            fit_kwargs: dict = {}
             if self.model_args is not None:
-                minisom_args_default["init"].update(self.model_args["init"])
-                minisom_args_default["train"].update(self.model_args["train"])
-
-            som = MiniSom(**minisom_args_default["init"])
-            som.pca_weights_init(data)
-            som.train(data=data, **minisom_args_default["train"])
-            self.weights = som.get_weights().reshape(-1, 2)
+                init_kwargs.update(self.model_args.get("init", {}))
+                fit_kwargs.update(self.model_args.get("train", {}))
+            som = SomVQ(**init_kwargs)  # type: ignore[call-overload]
+            som.fit(data, **fit_kwargs)
+            self.weights = som.weights_
+            self.n_prototypes = len(self.weights)
             return som
 
-        if self.method == "kmeans":
-            kmeans_args_default = {
-                "init": {"n_clusters": self.n_prototypes},
-                "train": {"sample_weight": None},
-            }
+        kmeans_args_default = {
+            "init": {"n_clusters": self.n_prototypes},
+            "train": {"sample_weight": None},
+        }
 
-            if self.model_args is not None:
-                kmeans_args_default["init"].update(self.model_args["init"])
-                kmeans_args_default["train"].update(self.model_args["train"])
-            kmeans = KMeans(**kmeans_args_default["init"], verbose=self.verbose)
-            kmeans.fit(X=data, **kmeans_args_default["train"])
-            self.weights = kmeans.cluster_centers_
-            return kmeans
-
-        return None
+        if self.model_args is not None:
+            kmeans_args_default["init"].update(self.model_args.get("init", {}))
+            kmeans_args_default["train"].update(self.model_args.get("train", {}))
+        kmeans = KMeans(**kmeans_args_default["init"], verbose=self.verbose)
+        kmeans.fit(X=data, **kmeans_args_default["train"])
+        self.weights = kmeans.cluster_centers_
+        self.n_prototypes = len(self.weights)
+        return kmeans
 
     def _enrich_prototypes(self) -> tuple[pd.DataFrame, pd.DataFrame]:
         """Enrich each prototype with a local density estimate,
@@ -219,7 +215,7 @@ class DS2LSOM:
 
         #  Distances of samples where clostest prototype is prototype
         nearest_prototype_id = self.dist_matrix.argmin(axis=0)
-        densities = np.zeros(shape=(self.som_dim * self.som_dim))
+        densities = np.zeros(self.n_prototypes)
         for prototype in range(len(self.dist_matrix)):
             distances = self.dist_matrix[prototype, nearest_prototype_id == prototype]
             if len(distances) > 0:
@@ -248,7 +244,7 @@ class DS2LSOM:
         """
         #  Distances of samples where clostest prototype is prototype
         dist_matrix_sorted = self.dist_matrix.argsort(axis=0)[0]
-        variabilities = np.zeros(shape=(self.som_dim * self.som_dim))
+        variabilities = np.zeros(self.n_prototypes)
         for prototype in range(len(self.dist_matrix)):
             neighbors = self.dist_matrix[prototype, dist_matrix_sorted == prototype]
             #  Surpress warning about empty slices
@@ -266,7 +262,7 @@ class DS2LSOM:
         Compute the number v_{i,j} of data having i and j as first two BMUs
         """
         BMUs = np.argsort(self.dist_matrix, axis=0)[:2, :]
-        v = np.zeros(shape=(self.som_dim**2, self.som_dim**2))
+        v = np.zeros(shape=(self.n_prototypes, self.n_prototypes))
         u, counts = np.unique(BMUs, axis=1, return_counts=True)
         u = u.T
         for index, combination in enumerate(u):
@@ -359,10 +355,9 @@ class DS2LSOM:
         Input : Graph
         """
         converged = False
-        # cont = True
         while not converged:
-            # cont = False
             G = self.graph
+            converged = True
             for e in G.edges:
                 node_i = G.nodes[e[0]]
                 node_j = G.nodes[e[1]]
@@ -390,8 +385,6 @@ class DS2LSOM:
                     self._merge_micro_clusters(
                         G, label_i, label_j, density_max_i, density_max_j
                     )
-                else:
-                    converged = True
         self.graph = G
 
     def _merge_micro_clusters(
