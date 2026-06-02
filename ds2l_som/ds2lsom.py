@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Self, Union
 
 import networkx as nx
 import numpy as np
@@ -7,6 +7,7 @@ from dbgsom.SomVQ import SomVQ
 from sklearn.base import BaseEstimator, ClusterMixin
 from sklearn.cluster import KMeans
 from sklearn.metrics import pairwise_distances
+from sklearn.utils.validation import check_is_fitted, validate_data
 
 
 class DS2LSOM(ClusterMixin, BaseEstimator):
@@ -50,78 +51,84 @@ class DS2LSOM(ClusterMixin, BaseEstimator):
 
     def __init__(
         self,
-        n_prototypes: Union[int, None] = None,
+        n_prototypes: int | None = None,
         threshold: int = 1,
-        sigma: Union[float, None] = None,
+        sigma: float | None = None,
         method: str = "som",
         verbose: bool = False,
-        model_args: dict = None,
+        model_args: dict | None = None,
     ) -> None:
-
-        methods = ("som", "kmeans")
-        self.method = method
-        if self.method not in methods:
-            raise ValueError(f"{method} is not an method for prototype computation.")
-
         self.n_prototypes = n_prototypes
         self.model_args = model_args
         self.threshold = threshold
         self.sigma = sigma
         self.verbose = verbose
+        self.method = method
 
-    def fit(self, data) -> None:
+    def fit(self, X, y=None) -> Self:
         """Fit and train SOM, enrich prototypes and return graph of prototypes.
 
         Parameters
         ----------
-        data : array or DataFrame of shape (n_samples, n_features)
+        X : array-like of shape (n_samples, n_features)
 
         Returns
         -------
         self : Fitted estimator
         """
+        methods = ("som", "kmeans")
+        if self.method not in methods:
+            raise ValueError(f"{self.method} is not a valid method for prototype computation.")
+
+        X = validate_data(self, X)
+
         if self.verbose:
             print("Started training.")
 
-        sample_size = len(data)
-        if self.n_prototypes is None:
-            self.n_prototypes = int(10 * (sample_size ** (1 / 2)))
-        assert isinstance(self.n_prototypes, int)
+        n_prototypes_ = self.n_prototypes
+        if n_prototypes_ is None:
+            n_prototypes_ = int(10 * (len(X) ** 0.5))
+        self.n_prototypes_ = n_prototypes_
 
-        self.quantizer = self._train_quantizer(data)
-        self._get_dist_matrix(data)
-        self.nbr_values, self.prototypes = self._enrich_prototypes()
-        self.edge_list = self._get_edges()
-        self.graph = self._create_graph()
+        self.quantizer_ = self._train_quantizer(X)
+        self._get_dist_matrix(X)
+        self.nbr_values_, self.prototypes_ = self._enrich_prototypes()
+        self.edge_list_ = self._get_edges()
+        self.graph_ = self._create_graph()
         self._initial_clustering()
         self._final_clustering()
+
+        self.labels_ = self.predict(X)
 
         if self.verbose:
             print("Training finished.")
 
-    def predict(self, data: np.ndarray) -> np.ndarray:
+        return self
+
+    def predict(self, X) -> np.ndarray:
         """Return the cluster id for each sample.
 
-        Input
-        -----
-        data : array of shape (n_samples, n_features)
-            Data to cluster.
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
 
         Returns
         -------
-        labels : array
-            Labels of clusters.
+        labels : ndarray of shape (n_samples,)
+            Cluster labels. -1 for unassigned points.
         """
-        #  Get Best Matching Prototype
+        check_is_fitted(self)
+        X = validate_data(self, X, reset=False)
+
         if self.method == "som":
-            pred = pairwise_distances(self.weights, data).argmin(axis=0)
+            pred = pairwise_distances(self.weights_, X).argmin(axis=0)
         elif self.method == "kmeans":
-            pred = self.quantizer.predict(data)
+            pred = self.quantizer_.predict(X)
 
         pred = np.array(pred, dtype=np.intp)
         for sample, prototype in enumerate(pred):
-            if prototype in self.graph:
-                pred[sample] = self.graph.nodes[prototype]["label"]
+            if prototype in self.graph_:
+                pred[sample] = self.graph_.nodes[prototype]["label"]
             else:
                 pred[sample] = -1
 
@@ -131,93 +138,64 @@ class DS2LSOM(ClusterMixin, BaseEstimator):
             _, pred[assigned] = np.unique(pred[assigned], return_inverse=True)
         return pred
 
-    def _get_dist_matrix(self, data) -> None:
+    def _get_dist_matrix(self, X) -> None:
         """Calculate distance matrix (i, j) for prototype i and sample j."""
         if self.method == "som":
-            self.dist_matrix = pairwise_distances(self.weights, data)
+            self.dist_matrix_ = pairwise_distances(self.weights_, X)
         elif self.method == "kmeans":
-            self.dist_matrix = self.quantizer.transform(data).T
+            self.dist_matrix_ = self.quantizer_.transform(X).T
 
-    def _train_quantizer(self, data) -> Union[SomVQ, KMeans]:
-        """Define model and train on data.
-
-        Input:
-        ------
-        Data, SOM args
-
-        Returns:
-        -------
-        Trained SOM Object
-        """
-        assert isinstance(self.n_prototypes, int)
-
+    def _train_quantizer(self, X) -> Union[SomVQ, KMeans]:
+        """Train the vector quantizer and store weights in self.weights_."""
         if self.method == "som":
-            init_kwargs: dict = {"max_neurons": self.n_prototypes}
+            init_kwargs: dict = {"max_neurons": self.n_prototypes_}
             fit_kwargs: dict = {}
             if self.model_args is not None:
                 init_kwargs.update(self.model_args.get("init", {}))
                 fit_kwargs.update(self.model_args.get("train", {}))
             som = SomVQ(**init_kwargs)  # type: ignore[call-overload]
-            som.fit(data, **fit_kwargs)
-            self.weights = som.weights_
-            self.n_prototypes = len(self.weights)
+            som.fit(X, **fit_kwargs)
+            self.weights_ = som.weights_
+            self.n_prototypes_ = len(self.weights_)
             return som
 
         kmeans_args_default = {
-            "init": {"n_clusters": self.n_prototypes},
+            "init": {"n_clusters": self.n_prototypes_},
             "train": {"sample_weight": None},
         }
-
         if self.model_args is not None:
             kmeans_args_default["init"].update(self.model_args.get("init", {}))
             kmeans_args_default["train"].update(self.model_args.get("train", {}))
         kmeans = KMeans(**kmeans_args_default["init"], verbose=self.verbose)
-        kmeans.fit(X=data, **kmeans_args_default["train"])
-        self.weights = kmeans.cluster_centers_
-        self.n_prototypes = len(self.weights)
+        kmeans.fit(X=X, **kmeans_args_default["train"])
+        self.weights_ = kmeans.cluster_centers_
+        self.n_prototypes_ = len(self.weights_)
         return kmeans
 
     def _enrich_prototypes(self) -> tuple[pd.DataFrame, pd.DataFrame]:
-        """Enrich each prototype with a local density estimate,
-        a local variability estimate and connected neighbors.
-
-        Input:
-        ------
-        Distance matrix Dist(w, x) between M prototypes w und the N data x
-
-        Output:
-        ------
-        Dataframe with the local density D_i and local variability s_i
-        associated to each prototype w_i,
-
-        The neighborhood values v_{i,j} associated with each pair of prototypes
-         w_i and w_j
-        """
-        self.densities = self._estimate_density()
-        self.variabilities = self._estimate_local_variability()
+        """Enrich each prototype with density, variability, and neighborhood values."""
+        self.densities_ = self._estimate_density()
+        self.variabilities_ = self._estimate_local_variability()
         nbr_values = self._estimate_neighborhood_values()
 
         prototypes = pd.DataFrame(
-            [self.densities, self.variabilities], index=["d", "s"]
+            [self.densities_, self.variabilities_], index=["d", "s"]
         ).T
         v = pd.DataFrame(nbr_values)
 
         return v, prototypes
 
     def _estimate_density(self) -> np.ndarray:
-        """Estimate local density for each prototype
-        from its assigned samples.
-        """
+        """Estimate local density for each prototype from its assigned samples."""
         if self.sigma is None:
             sigma = self._calculate_sigma()
         else:
             sigma = self.sigma
 
-        #  Distances of samples where clostest prototype is prototype
-        nearest_prototype_id = self.dist_matrix.argmin(axis=0)
-        densities = np.zeros(self.n_prototypes)
-        for prototype in range(len(self.dist_matrix)):
-            distances = self.dist_matrix[prototype, nearest_prototype_id == prototype]
+        nearest_prototype_id = self.dist_matrix_.argmin(axis=0)
+        densities = np.zeros(self.n_prototypes_)
+        for prototype in range(len(self.dist_matrix_)):
+            distances = self.dist_matrix_[prototype, nearest_prototype_id == prototype]
             if len(distances) > 0:
                 d = np.mean(
                     (np.exp(-(distances**2) / (2 * sigma**2)))
@@ -230,24 +208,18 @@ class DS2LSOM(ClusterMixin, BaseEstimator):
         return densities
 
     def _calculate_sigma(self):
-        """Heuristic for sigma: Mean distance between
-        prototype and nearest neighbor."""
-        pairwise_prototype_distances = pairwise_distances(self.weights, self.weights)
+        """Heuristic for sigma: mean distance between prototype and nearest neighbor."""
+        pairwise_prototype_distances = pairwise_distances(self.weights_, self.weights_)
         pairwise_prototype_distances.sort(axis=1)
-        clostes_neighbor_distances = pairwise_prototype_distances[:, 1]
-        sigma = np.mean(clostes_neighbor_distances)
-        return sigma
+        closest_neighbor_distances = pairwise_prototype_distances[:, 1]
+        return np.mean(closest_neighbor_distances)
 
     def _estimate_local_variability(self) -> np.ndarray:
-        """For each prototype w, variability s is the mean distance
-        between w and the L data x_w represented by w.
-        """
-        #  Distances of samples where clostest prototype is prototype
-        dist_matrix_sorted = self.dist_matrix.argsort(axis=0)[0]
-        variabilities = np.zeros(self.n_prototypes)
-        for prototype in range(len(self.dist_matrix)):
-            neighbors = self.dist_matrix[prototype, dist_matrix_sorted == prototype]
-            #  Surpress warning about empty slices
+        """For each prototype w, variability s is the mean distance to its assigned samples."""
+        dist_matrix_sorted = self.dist_matrix_.argsort(axis=0)[0]
+        variabilities = np.zeros(self.n_prototypes_)
+        for prototype in range(len(self.dist_matrix_)):
+            neighbors = self.dist_matrix_[prototype, dist_matrix_sorted == prototype]
             if len(neighbors) > 0:
                 variabilities[prototype] = np.mean(neighbors)
             else:
@@ -256,84 +228,54 @@ class DS2LSOM(ClusterMixin, BaseEstimator):
         return variabilities
 
     def _estimate_neighborhood_values(self) -> np.ndarray:
-        """For each data x, find the two clostest prototypes
-         u*(x) and u**(x) (Best Matching Units, BMUs).
-
-        Compute the number v_{i,j} of data having i and j as first two BMUs
-        """
-        BMUs = np.argsort(self.dist_matrix, axis=0)[:2, :]
-        v = np.zeros(shape=(self.n_prototypes, self.n_prototypes))
+        """Compute v_{i,j}: number of samples having i and j as their two closest prototypes."""
+        BMUs = np.argsort(self.dist_matrix_, axis=0)[:2, :]
+        v = np.zeros(shape=(self.n_prototypes_, self.n_prototypes_))
         u, counts = np.unique(BMUs, axis=1, return_counts=True)
         u = u.T
         for index, combination in enumerate(u):
-            #  Define edge existence in both directions
             v[combination[0], combination[1]] = counts[index]
             v[combination[1], combination[0]] = counts[index]
 
         return v
 
     def _get_edges(self) -> pd.DataFrame:
-        """Find list of node pairs (i, j) s.t. v_{i, j} >= threshold
-
-        Input
-        -----
-            v: Matrix of connected nodes (v_{i,j} have common samples).
-        Returns
-        -------
-            groups: Indices (source, target) of all edges
-        """
-        indices = np.asarray(self.nbr_values >= self.threshold).nonzero()
+        """Find all prototype pairs (i, j) with v_{i,j} >= threshold."""
+        indices = np.asarray(self.nbr_values_ >= self.threshold).nonzero()
         edges = set(zip(indices[0], indices[1]))
         edges = pd.DataFrame(edges, columns=["source", "target"])
 
         return edges
 
     def _create_graph(self) -> nx.Graph:
-        """Create Graph with edges between prototypes.
-
-        Input:
-        ------
-        The list of connected prototypes,
-
-        Data for each prototype
-
-        Output:
-        -------
-        Graph object with enriched protoypes.
-        """
-        edges = self.edge_list
-        prototypes = self.prototypes
+        """Create a graph with enriched prototype attributes."""
         g = nx.from_pandas_edgelist(
-            edges,
+            self.edge_list_,
             source="source",
             target="target",
             create_using=nx.Graph,
         )
 
-        nx.set_node_attributes(g, prototypes.d, "density")
-        nx.set_node_attributes(g, prototypes.s, "variability")
+        nx.set_node_attributes(g, self.prototypes_.d, "density")
+        nx.set_node_attributes(g, self.prototypes_.s, "variability")
 
         return g
 
     def _initial_clustering(self) -> None:
-        """Label each prototype by the maximum with the highest gradient."""
-        #  Create initial labels
-        for node in self.graph:
-            self.graph.nodes[node]["label"] = node
+        """Label each prototype by gradient ascent toward the local density maximum."""
+        for node in self.graph_:
+            self.graph_.nodes[node]["label"] = node
 
-        #  if there are non connected components, run over each separately
-        components = nx.connected_components(self.graph)
+        components = nx.connected_components(self.graph_)
         for component in components:
-            subgraph = self.graph.subgraph(nodes=component)
+            subgraph = self.graph_.subgraph(nodes=component)
             longest_path = nx.diameter(subgraph)
 
             for i in range(longest_path):
-                #  Iterate over (node, neighbors) pairs
                 for node, nbr_data in subgraph.adj.items():
                     node_density = subgraph.nodes[node]["density"]
                     largest_gradient = 0
                     largest_gradient_neighbor = node
-                    # iterate over neighbors of each node
                     for nbr in nbr_data:
                         nbr_density = subgraph.nodes[nbr]["density"]
                         gradient = nbr_density - node_density
@@ -341,22 +283,19 @@ class DS2LSOM(ClusterMixin, BaseEstimator):
                             largest_gradient = gradient
                             largest_gradient_neighbor = nbr
 
-                    self.graph.nodes[node]["label"] = self.graph.nodes[
+                    self.graph_.nodes[node]["label"] = self.graph_.nodes[
                         largest_gradient_neighbor
                     ]["label"]
 
-                    subgraph.nodes[node]["label"] = self.graph.nodes[
+                    subgraph.nodes[node]["label"] = self.graph_.nodes[
                         largest_gradient_neighbor
                     ]["label"]
 
     def _final_clustering(self) -> None:
-        """Merge clusters according to pairwise density threshold of clusters.
-
-        Input : Graph
-        """
+        """Merge micro-clusters according to pairwise density threshold."""
         converged = False
         while not converged:
-            G = self.graph
+            G = self.graph_
             converged = True
             for e in G.edges:
                 node_i = G.nodes[e[0]]
@@ -385,7 +324,7 @@ class DS2LSOM(ClusterMixin, BaseEstimator):
                     self._merge_micro_clusters(
                         G, label_i, label_j, density_max_i, density_max_j
                     )
-        self.graph = G
+        self.graph_ = G
 
     def _merge_micro_clusters(
         self,
@@ -395,9 +334,7 @@ class DS2LSOM(ClusterMixin, BaseEstimator):
         density_max_i: float,
         density_max_j: float,
     ) -> None:
-        """Overwrite label of low density cluster with
-        label of high density cluster.
-        """
+        """Overwrite label of low-density cluster with label of high-density cluster."""
         if density_max_i > density_max_j:
             new_label = label_i
             old_label = label_j
@@ -405,7 +342,6 @@ class DS2LSOM(ClusterMixin, BaseEstimator):
             new_label = label_j
             old_label = label_i
 
-        #  Overwrite lower density label
         for node, label in G.nodes.data("label"):
             if label == old_label:
                 G.nodes[node]["label"] = new_label
