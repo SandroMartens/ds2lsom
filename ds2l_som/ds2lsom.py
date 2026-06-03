@@ -229,7 +229,7 @@ class DS2LSOM(ClusterMixin, BaseEstimator):
 
     def _estimate_neighborhood_values(self) -> np.ndarray:
         """Compute v_{i,j}: number of samples having i and j as their two closest prototypes."""
-        BMUs = np.argsort(self.dist_matrix_, axis=0)[:2, :]
+        BMUs = np.argpartition(self.dist_matrix_, 2, axis=0)[:2, :]
         v = np.zeros(shape=(self.n_prototypes_, self.n_prototypes_))
         u, counts = np.unique(BMUs, axis=1, return_counts=True)
         u = u.T
