@@ -1,3 +1,6 @@
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+
 # DS2L-SOM
 
 DS2L-SOM is a topological, density-based clustering algorithm. It combines a Self-Organizing Map (SOM) for prototype learning with Gaussian KDE density estimation and gradient ascent to detect clusters — without requiring the number of clusters to be specified in advance.
@@ -21,14 +24,14 @@ DS2LSOM implements the scikit-learn API (`ClusterMixin`, `BaseEstimator`) and is
 
 ## Parameters
 
-| Parameter | Default | Description |
-|---|---|---|
-| `n_prototypes` | auto (10·√n) | Maximum number of SOM prototypes |
-| `threshold` | 1 | Minimum shared samples for a prototype edge |
-| `sigma` | auto | Bandwidth for Gaussian KDE density estimation |
-| `method` | `"som"` | Quantizer backend: `"som"` (dbgsom) or `"kmeans"` |
-| `model_args` | `None` | Kwargs passed to the quantizer: `{"init": {...}, "train": {...}}` |
-| `verbose` | `False` | Print progress |
+| Parameter      | Default      | Description                                                       |
+| -------------- | ------------ | ----------------------------------------------------------------- |
+| `n_prototypes` | auto (10·√n) | Maximum number of SOM prototypes                                  |
+| `threshold`    | 1            | Minimum shared samples for a prototype edge                       |
+| `sigma`        | auto         | Bandwidth for Gaussian KDE density estimation                     |
+| `method`       | `"som"`      | Quantizer backend: `"som"` (dbgsom) or `"kmeans"`                 |
+| `model_args`   | `None`       | Kwargs passed to the quantizer: `{"init": {...}, "train": {...}}` |
+| `verbose`      | `False`      | Print progress                                                    |
 
 Example with custom SOM parameters:
 
@@ -44,12 +47,12 @@ model = DS2LSOM(
 
 Evaluated on `load_digits` (1797 samples, 64 features, 10 classes) using pairwise Rand and Jaccard index (as defined in the papers). DS2LSOM does not receive the true number of clusters.
 
-| Algorithm | Clusters | Noise | Rand | Jaccard |
-|---|:---:|:---:|:---:|:---:|
-| DS2LSOM | 9 (auto) | 37 | 0.912 | 0.461 |
-| KMeans *(n=10 given)* | 10 | 0 | 0.906 | 0.415 |
-| Agglomerative *(n=10 given)* | 10 | 0 | 0.930 | 0.542 |
-| HDBSCAN | 6 (auto) | 1244 | — | — |
+| Algorithm                    | Clusters | Noise | Rand  | Jaccard |
+| ---------------------------- | :------: | :---: | :---: | :-----: |
+| DS2LSOM                      | 9 (auto) |  37   | 0.912 |  0.461  |
+| KMeans _(n=10 given)_        |    10    |   0   | 0.906 |  0.415  |
+| Agglomerative _(n=10 given)_ |    10    |   0   | 0.930 |  0.542  |
+| HDBSCAN                      | 6 (auto) | 1244  |   —   |    —    |
 
 HDBSCAN metrics are excluded: 69% noise points make the scores not comparable.
 
@@ -71,5 +74,5 @@ uv add ds2l-som
 
 ## References
 
-- *A Local Density-based Simultaneous Two-level Algorithm for Topographic Clustering*, Guénaël Cabanes and Younès Bennani, 2008
-- *Enriched topological learning for cluster detection and visualization*, Guénaël Cabanes, Younès Bennani and Dominique Fresneau, 2012
+- _A Local Density-based Simultaneous Two-level Algorithm for Topographic Clustering_, Guénaël Cabanes and Younès Bennani, 2008
+- _Enriched topological learning for cluster detection and visualization_, Guénaël Cabanes, Younès Bennani and Dominique Fresneau, 2012
