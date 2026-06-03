@@ -16,6 +16,15 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest", "matplotlib", "jupyter"]
+docs = [
+    "sphinx",
+    "sphinx-gallery",
+    "furo",
+    "numpydoc",
+    "matplotlib",
+    "pillow",
+    "scikit-learn",
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -25,4 +34,12 @@ build-backend = "hatchling.build"
 dev = [
     "ipykernel>=7.2.0",
     "umap-learn>=0.5.12",
+]
+docs = [
+    "sphinx",
+    "sphinx-gallery",
+    "furo",
+    "numpydoc",
+    "matplotlib",
+    "pillow",
 ]

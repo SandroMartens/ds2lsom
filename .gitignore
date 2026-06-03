@@ -5,3 +5,17 @@
 
 prototype.ipynb
 testing.ipynb
+
+# Python packaging
+*.egg-info/
+dist/
+build/
+.venv/
+
+# Sphinx documentation
+doc/_build/
+doc/auto_examples/
+doc/generated/
+
+# Jupyter
+.ipynb_checkpoints/
