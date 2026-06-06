@@ -47,6 +47,10 @@ class DS2LSOM(ClusterMixin, BaseEstimator):
 
     verbose : bool, default = False
         Print information about each step.
+
+    random_state : int, RandomState instance or None, default = None
+        Seed for the random number generator passed to the quantizer.
+        Use an int for reproducible results.
     """
 
     def __init__(
@@ -57,6 +61,7 @@ class DS2LSOM(ClusterMixin, BaseEstimator):
         method: str = "som",
         verbose: bool = False,
         model_args: dict | None = None,
+        random_state: int | np.random.RandomState | None = None,
     ) -> None:
         self.n_prototypes = n_prototypes
         self.model_args = model_args
@@ -64,6 +69,7 @@ class DS2LSOM(ClusterMixin, BaseEstimator):
         self.sigma = sigma
         self.verbose = verbose
         self.method = method
+        self.random_state = random_state
 
     def fit(self, X, y=None) -> Self:
         """Fit and train SOM, enrich prototypes and return graph of prototypes.
@@ -148,7 +154,7 @@ class DS2LSOM(ClusterMixin, BaseEstimator):
     def _train_quantizer(self, X) -> Union[SomVQ, KMeans]:
         """Train the vector quantizer and store weights in self.weights_."""
         if self.method == "som":
-            init_kwargs: dict = {"max_neurons": self.n_prototypes_}
+            init_kwargs: dict = {"max_neurons": self.n_prototypes_, "random_state": self.random_state}
             fit_kwargs: dict = {}
             if self.model_args is not None:
                 init_kwargs.update(self.model_args.get("init", {}))
@@ -160,7 +166,7 @@ class DS2LSOM(ClusterMixin, BaseEstimator):
             return som
 
         kmeans_args_default = {
-            "init": {"n_clusters": self.n_prototypes_},
+            "init": {"n_clusters": self.n_prototypes_, "random_state": self.random_state},
             "train": {"sample_weight": None},
         }
         if self.model_args is not None:

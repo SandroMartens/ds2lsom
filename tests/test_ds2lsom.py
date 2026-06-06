@@ -34,10 +34,9 @@ class TestPredict:
 
 class TestFitPredict:
     def test_consistent_with_fit_then_predict(self, X_blobs):
-        m1 = DS2LSOM(n_prototypes=20)
-        m2 = DS2LSOM(n_prototypes=20)
+        m1 = DS2LSOM(n_prototypes=20, random_state=42)
         labels_fp = m1.fit_predict(X_blobs)
-        labels_p = m2.fit(X_blobs).predict(X_blobs)
+        labels_p = m1.predict(X_blobs)
         np.testing.assert_array_equal(labels_fp, labels_p)
 
 

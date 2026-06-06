@@ -12,4 +12,4 @@ def X_blobs():
 
 @pytest.fixture
 def fitted_model(X_blobs):
-    return DS2LSOM(n_prototypes=20).fit(X_blobs)
+    return DS2LSOM(n_prototypes=20, random_state=42).fit(X_blobs)
