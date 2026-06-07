@@ -559,7 +559,7 @@ wheels = [
 
 [[package]]
 name = "ds2l-som"
-version = "0.2.0b1"
+version = "0.3.0b1"
 source = { editable = "." }
 dependencies = [
     { name = "dbgsom" },
