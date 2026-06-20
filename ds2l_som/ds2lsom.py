@@ -83,7 +83,9 @@ class DS2LSOM(ClusterMixin, BaseEstimator):
         """
         methods = ("som", "kmeans")
         if self.method not in methods:
-            raise ValueError(f"{self.method} is not a valid method for prototype computation.")
+            raise ValueError(
+                f"{self.method} is not a valid method for prototype computation."
+            )
 
         X = validate_data(self, X)
 
@@ -153,7 +155,10 @@ class DS2LSOM(ClusterMixin, BaseEstimator):
     def _train_quantizer(self, X) -> SomVQ | KMeans:
         """Train the vector quantizer and store weights in self.weights_."""
         if self.method == "som":
-            init_kwargs: dict = {"max_neurons": self.n_prototypes_, "random_state": self.random_state}
+            init_kwargs: dict = {
+                "max_neurons": self.n_prototypes_,
+                "random_state": self.random_state,
+            }
             fit_kwargs: dict = {}
             if self.model_args is not None:
                 init_kwargs.update(self.model_args.get("init", {}))
@@ -165,7 +170,10 @@ class DS2LSOM(ClusterMixin, BaseEstimator):
             return som
 
         kmeans_args_default = {
-            "init": {"n_clusters": self.n_prototypes_, "random_state": self.random_state},
+            "init": {
+                "n_clusters": self.n_prototypes_,
+                "random_state": self.random_state,
+            },
             "train": {"sample_weight": None},
         }
         if self.model_args is not None:
