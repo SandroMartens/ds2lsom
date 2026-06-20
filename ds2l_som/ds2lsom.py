@@ -1,8 +1,7 @@
-from typing import Self, Union
+from typing import Self
 
 import networkx as nx
 import numpy as np
-import pandas as pd
 from dbgsom.SomVQ import SomVQ
 from sklearn.base import BaseEstimator, ClusterMixin
 from sklearn.cluster import KMeans
@@ -98,7 +97,7 @@ class DS2LSOM(ClusterMixin, BaseEstimator):
 
         self.quantizer_ = self._train_quantizer(X)
         self._get_dist_matrix(X)
-        self.nbr_values_, self.prototypes_ = self._enrich_prototypes()
+        self.nbr_values_ = self._enrich_prototypes()
         self.edge_list_ = self._get_edges()
         self.graph_ = self._create_graph()
         self._initial_clustering()
@@ -151,7 +150,7 @@ class DS2LSOM(ClusterMixin, BaseEstimator):
         elif self.method == "kmeans":
             self.dist_matrix_ = self.quantizer_.transform(X).T
 
-    def _train_quantizer(self, X) -> Union[SomVQ, KMeans]:
+    def _train_quantizer(self, X) -> SomVQ | KMeans:
         """Train the vector quantizer and store weights in self.weights_."""
         if self.method == "som":
             init_kwargs: dict = {"max_neurons": self.n_prototypes_, "random_state": self.random_state}
@@ -178,18 +177,11 @@ class DS2LSOM(ClusterMixin, BaseEstimator):
         self.n_prototypes_ = len(self.weights_)
         return kmeans
 
-    def _enrich_prototypes(self) -> tuple[pd.DataFrame, pd.DataFrame]:
+    def _enrich_prototypes(self) -> np.ndarray:
         """Enrich each prototype with density, variability, and neighborhood values."""
         self.densities_ = self._estimate_density()
         self.variabilities_ = self._estimate_local_variability()
-        nbr_values = self._estimate_neighborhood_values()
-
-        prototypes = pd.DataFrame(
-            [self.densities_, self.variabilities_], index=["d", "s"]
-        ).T
-        v = pd.DataFrame(nbr_values)
-
-        return v, prototypes
+        return self._estimate_neighborhood_values()
 
     def _estimate_density(self) -> np.ndarray:
         """Estimate local density for each prototype from its assigned samples."""
@@ -245,25 +237,18 @@ class DS2LSOM(ClusterMixin, BaseEstimator):
 
         return v
 
-    def _get_edges(self) -> pd.DataFrame:
+    def _get_edges(self) -> set[tuple[int, int]]:
         """Find all prototype pairs (i, j) with v_{i,j} >= threshold."""
         indices = np.asarray(self.nbr_values_ >= self.threshold).nonzero()
-        edges = set(zip(indices[0], indices[1]))
-        edges = pd.DataFrame(edges, columns=["source", "target"])
-
-        return edges
+        return set(zip(indices[0], indices[1]))
 
     def _create_graph(self) -> nx.Graph:
         """Create a graph with enriched prototype attributes."""
-        g = nx.from_pandas_edgelist(
-            self.edge_list_,
-            source="source",
-            target="target",
-            create_using=nx.Graph,
-        )
+        g = nx.Graph()
+        g.add_edges_from(self.edge_list_)
 
-        nx.set_node_attributes(g, self.prototypes_.d, "density")
-        nx.set_node_attributes(g, self.prototypes_.s, "variability")
+        nx.set_node_attributes(g, dict(enumerate(self.densities_)), "density")
+        nx.set_node_attributes(g, dict(enumerate(self.variabilities_)), "variability")
 
         return g
 

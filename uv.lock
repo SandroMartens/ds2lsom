@@ -565,7 +565,6 @@ dependencies = [
     { name = "dbgsom" },
     { name = "networkx" },
     { name = "numpy" },
-    { name = "pandas" },
     { name = "scikit-learn" },
 ]
 
@@ -589,6 +588,7 @@ docs = [
 [package.dev-dependencies]
 dev = [
     { name = "ipykernel" },
+    { name = "pytest" },
     { name = "umap-learn" },
 ]
 docs = [
@@ -610,7 +610,6 @@ requires-dist = [
     { name = "networkx", specifier = ">=3.0" },
     { name = "numpy", specifier = ">=2.0" },
     { name = "numpydoc", marker = "extra == 'docs'" },
-    { name = "pandas", specifier = ">=2.0" },
     { name = "pillow", marker = "extra == 'docs'" },
     { name = "pytest", marker = "extra == 'dev'" },
     { name = "pytest-cov", marker = "extra == 'dev'" },
@@ -624,6 +623,7 @@ provides-extras = ["dev", "docs"]
 [package.metadata.requires-dev]
 dev = [
     { name = "ipykernel", specifier = ">=7.2.0" },
+    { name = "pytest", specifier = ">=9.0.3" },
     { name = "umap-learn", specifier = ">=0.5.12" },
 ]
 docs = [
