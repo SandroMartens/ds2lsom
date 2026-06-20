@@ -19,3 +19,6 @@ doc/generated/
 
 # Jupyter
 .ipynb_checkpoints/
+
+# graphify
+graphify-out
