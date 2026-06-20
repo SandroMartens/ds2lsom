@@ -1,0 +1,60 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: ds2l-som
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Sandro
+    family-names: Martens
+    email: sandro.martens@web.de
+    orcid: 'https://orcid.org/0009-0005-6546-9015'
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.20706142
+    description: zenodo
+repository-code: 'https://github.com/SandroMartens/ds2lsom'
+abstract: >-
+  A Local Density-based Simultaneous Two-level Algorithm for
+  Topographic Clustering 
+keywords:
+  - machine learning
+  - som
+  - self-organizing map
+  - scikit-learn
+  - clustering
+license: MIT
+references:
+  - type: conference-paper
+    authors:
+      - given-names: Guénaël
+        family-names: Cabanes
+      - given-names: Younès
+        family-names: Bennani
+    title: >-
+      A Local Density-based Simultaneous Two-level Algorithm for
+      Topographic Clustering
+    year: 2008
+    collection-title: >-
+      Proceedings of the International Joint Conference on Neural
+      Networks (IJCNN)
+    start: 1176
+    end: 1182
+    doi: 10.1109/IJCNN.2008.4633948
+  - type: article
+    authors:
+      - given-names: Guénaël
+        family-names: Cabanes
+      - given-names: Younès
+        family-names: Bennani
+      - given-names: Dominique
+        family-names: Fresneau
+    title: >-
+      Enriched topological learning for cluster detection and
+      visualization
+    year: 2012
+    journal: Neural Networks
+    doi: 10.1016/j.neunet.2012.02.019
