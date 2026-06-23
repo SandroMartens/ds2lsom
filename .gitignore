@@ -16,6 +16,7 @@ build/
 doc/_build/
 doc/auto_examples/
 doc/generated/
+doc/sg_execution_times.rst
 
 # Jupyter
 .ipynb_checkpoints/

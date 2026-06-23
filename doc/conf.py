@@ -1,12 +1,17 @@
 import os
 import sys
+from importlib.metadata import version as _pkg_version
 
 sys.path.insert(0, os.path.abspath(".."))
 
 project = "DS2L-SOM"
-copyright = "2024, Sandro Martens"
+copyright = "2026, Sandro Martens"
 author = "Sandro Martens"
-release = "0.1.0"
+try:
+    release = _pkg_version("ds2l-som")
+except Exception:
+    release = "0.3.0"
+version = ".".join(release.split(".")[:2])
 
 extensions = [
     "sphinx.ext.autodoc",
@@ -23,11 +28,10 @@ intersphinx_mapping = {
     "sklearn": ("https://scikit-learn.org/stable/", None),
 }
 
-templates_path = ["_templates"]
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 html_theme = "furo"
-html_static_path = ["_static"]
+html_title = f"DS2L-SOM {release}"
 
 numpydoc_show_class_members = False
 autosummary_generate = True

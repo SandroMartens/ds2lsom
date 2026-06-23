@@ -25,7 +25,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest", "pytest-cov", "matplotlib", "jupyter"]
+dev = ["pytest", "pytest-cov", "matplotlib", "jupyter", "ruff"]
 docs = [
     "sphinx",
     "sphinx-gallery",
