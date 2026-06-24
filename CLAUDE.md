@@ -10,9 +10,11 @@ uv run pytest                    # run all tests
 uv run pytest tests/test_ds2lsom.py::test_name   # run single test
 uv run pytest --cov --cov-branch --cov-report=xml  # with coverage (matches CI)
 uv run ruff check .              # lint
+uv sync --extra docs && uv run sphinx-build -b html doc doc/_build/html  # build docs
 ```
 
 CI (`.github/workflows/ci.yml`) runs test matrix ubuntu/windows/macos via `uv sync --extra dev` + `uv run pytest --cov`.
+Docs build on ReadTheDocs via `.readthedocs.yaml` (`python.install: method: uv`, `groups: [docs]`).
 
 ## Architecture
 
@@ -35,6 +37,10 @@ Single-algorithm package: `ds2l_som/ds2lsom.py` implements `DS2LSOM`, sklearn-co
 One class, no module boundary between SOM training, density estimation, graph construction, clustering — change one stage, check others: share `self.dist_matrix_`, `self.weights_`, `self.graph_` etc. as implicit state through pipeline.
 
 Key external dep: `dbgsom.SomVQ` (actual SOM trainer/vector quantizer) — not implemented here.
+
+## Docs
+
+Sphinx docs in `doc/` (`furo` theme, `sphinx-gallery` for `examples/plot_*.py` → `auto_examples/`). `doc/conf.py` reads version via `importlib.metadata`, falls back to a hardcoded string if package isn't installed with dist-info (local dev).
 
 ## Tests
 
