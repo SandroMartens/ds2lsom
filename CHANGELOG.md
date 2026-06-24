@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.3.0] - 2026-06-07
+## [0.3.0b1] - 2026-06-07
 
 ### Breaking Changes
 - Replaced MiniSom with `dbgsom` as SOM backend — different `model_args` structure

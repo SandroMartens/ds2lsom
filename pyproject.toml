@@ -24,6 +24,11 @@ dependencies = [
     "scikit-learn>=1.5",
 ]
 
+[project.urls]
+Homepage = "https://github.com/SandroMartens/ds2lsom"
+Repository = "https://github.com/SandroMartens/ds2lsom"
+Issues = "https://github.com/SandroMartens/ds2lsom/issues"
+
 [project.optional-dependencies]
 dev = ["pytest", "pytest-cov", "matplotlib", "jupyter", "ruff"]
 docs = [

@@ -65,8 +65,8 @@ Time and memory complexity: **O(n · k)** where k ≈ 10·√n (default heuristi
 
 ```bash
 # Development
-git clone https://github.com/SandroMartens/ds2l-som.git
-cd ds2l-som
+git clone https://github.com/SandroMartens/ds2lsom.git
+cd ds2lsom
 uv sync
 
 # As a dependency in another project
