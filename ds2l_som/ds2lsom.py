@@ -187,18 +187,18 @@ class DS2LSOM(ClusterMixin, BaseEstimator):
 
     def _enrich_prototypes(self) -> np.ndarray:
         """Enrich each prototype with density, variability, and neighborhood values."""
-        self.densities_ = self._estimate_density()
-        self.variabilities_ = self._estimate_local_variability()
+        nearest_prototype_id = self.dist_matrix_.argmin(axis=0)
+        self.densities_ = self._estimate_density(nearest_prototype_id)
+        self.variabilities_ = self._estimate_local_variability(nearest_prototype_id)
         return self._estimate_neighborhood_values()
 
-    def _estimate_density(self) -> np.ndarray:
+    def _estimate_density(self, nearest_prototype_id: np.ndarray) -> np.ndarray:
         """Estimate local density for each prototype from its assigned samples."""
         if self.sigma is None:
             sigma = self._calculate_sigma()
         else:
             sigma = self.sigma
 
-        nearest_prototype_id = self.dist_matrix_.argmin(axis=0)
         densities = np.zeros(self.n_prototypes_)
         for prototype in range(len(self.dist_matrix_)):
             distances = self.dist_matrix_[prototype, nearest_prototype_id == prototype]
@@ -220,12 +220,11 @@ class DS2LSOM(ClusterMixin, BaseEstimator):
         closest_neighbor_distances = pairwise_prototype_distances[:, 1]
         return np.mean(closest_neighbor_distances)
 
-    def _estimate_local_variability(self) -> np.ndarray:
+    def _estimate_local_variability(self, nearest_prototype_id: np.ndarray) -> np.ndarray:
         """For each prototype w, variability s is the mean distance to its assigned samples."""
-        dist_matrix_sorted = self.dist_matrix_.argsort(axis=0)[0]
         variabilities = np.zeros(self.n_prototypes_)
         for prototype in range(len(self.dist_matrix_)):
-            neighbors = self.dist_matrix_[prototype, dist_matrix_sorted == prototype]
+            neighbors = self.dist_matrix_[prototype, nearest_prototype_id == prototype]
             if len(neighbors) > 0:
                 variabilities[prototype] = np.mean(neighbors)
             else:
