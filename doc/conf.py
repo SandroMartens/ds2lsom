@@ -1,8 +1,4 @@
-import os
-import sys
 from importlib.metadata import version as _pkg_version
-
-sys.path.insert(0, os.path.abspath(".."))
 
 project = "DS2L-SOM"
 copyright = "2026, Sandro Martens"

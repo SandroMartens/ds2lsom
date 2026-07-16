@@ -5,15 +5,15 @@ Guidance for Claude Code (claude.ai/code), this repo.
 ## Commands
 
 ```bash
-uv sync --extra dev              # install deps (Python >=3.12, uv-managed)
+uv sync                          # install deps (Python >=3.12, uv-managed; dev group is default)
 uv run pytest                    # run all tests
 uv run pytest tests/test_ds2lsom.py::test_name   # run single test
 uv run pytest --cov --cov-branch --cov-report=xml  # with coverage (matches CI)
 uv run ruff check .              # lint
-uv sync --extra docs && uv run sphinx-build -b html doc doc/_build/html  # build docs
+uv sync --group docs && uv run sphinx-build -b html doc doc/_build/html  # build docs
 ```
 
-CI (`.github/workflows/ci.yml`) runs test matrix ubuntu/windows/macos via `uv sync --extra dev` + `uv run pytest --cov`.
+CI (`.github/workflows/ci.yml`) runs test matrix ubuntu/windows/macos via `uv sync` + `uv run pytest --cov`.
 Docs build on ReadTheDocs via `.readthedocs.yaml` (`python.install: method: uv`, `groups: [docs]`).
 
 ## Architecture

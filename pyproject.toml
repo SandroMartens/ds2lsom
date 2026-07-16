@@ -29,18 +29,6 @@ Homepage = "https://github.com/SandroMartens/ds2lsom"
 Repository = "https://github.com/SandroMartens/ds2lsom"
 Issues = "https://github.com/SandroMartens/ds2lsom/issues"
 
-[project.optional-dependencies]
-dev = ["pytest", "pytest-cov", "matplotlib", "jupyter", "ruff"]
-docs = [
-    "sphinx",
-    "sphinx-gallery",
-    "furo",
-    "numpydoc",
-    "matplotlib",
-    "pillow",
-    "scikit-learn",
-]
-
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 
@@ -51,7 +39,10 @@ build-backend = "hatchling.build"
 [dependency-groups]
 dev = [
     "ipykernel>=7.2.0",
+    "matplotlib",
     "pytest>=9.0.3",
+    "pytest-cov",
+    "ruff",
     "umap-learn>=0.5.12",
 ]
 docs = [

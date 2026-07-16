@@ -1,4 +1,3 @@
-import pytest
 from sklearn.utils.estimator_checks import parametrize_with_checks
 
 from ds2l_som.ds2lsom import DS2LSOM
